@@ -1,10 +1,10 @@
-# audio_interface.py
 import tkinter as tk
 from tkinter import filedialog, Label, Frame
 from tkinter import font as tkfont
 from PIL import Image, ImageTk  # For handling image display
 import os
-from audio_recognition import generate_waveform_plot  # Import the recognition logic
+from audio_recognition import generate_waveform_plot  # Import the waveform plot function
+from audio_onset_detection import detect_onsets, plot_onsets  # Import the onset detection logic
 
 # Create the main window and set it to full screen
 root = tk.Tk()
@@ -39,17 +39,26 @@ icon_label.pack(pady=20, expand=True, fill='both')
 button_style = {"font": button_font, "bg": "#4CAF50", "fg": "black", "width": 20}
 cancel_button_style = {"font": button_font, "bg": "#FF5733", "fg": "black", "width": 20}
 
-# Global variables to store the paths to the generated plot images
+# Global variables to store the paths to the audio files and plot images
+sample_audio_path = None
+practice_audio_path = None
 sample_plot_path = None
 practice_plot_path = None
 sample_img = None
 practice_img = None  # Keep separate references to each image
+sample_onset_plot = None
+practice_onset_plot = None  # Store paths for onset detection plots
 waveform_buttons = []
+onset_buttons = []
 generated_files = []  # List to track all generated files
+
+# Frame for buttons at the bottom
+button_frame = Frame(root, bg="#F0F0F0", relief="ridge", bd=2)
+button_frame.pack(side="bottom", fill="x")
 
 # Function to handle file upload and generate the waveform
 def upload_file(file_type):
-    global sample_plot_path, practice_plot_path
+    global sample_audio_path, practice_audio_path, sample_plot_path, practice_plot_path
     file_path = filedialog.askopenfilename(title=f"Select {file_type} Audio File", filetypes=[("Audio Files", "*.wav *.mp3")])
     if file_path:
         display_label.config(text=f"Processing {file_type}: {file_path.split('/')[-1]}")
@@ -60,19 +69,22 @@ def upload_file(file_type):
         if plot_path:
             display_label.config(text=f"{file_type} Processing Completed: {file_path.split('/')[-1]}")
             
-            # Store the plot path based on the file type
+            # Store the audio file path and plot path based on the file type
             if file_type == "Sample":
-                sample_plot_path = plot_path
+                sample_audio_path = file_path  # Store audio file path
+                sample_plot_path = plot_path   # Store plot path (for visualization)
             elif file_type == "Practice":
-                practice_plot_path = plot_path
+                practice_audio_path = file_path  # Store audio file path
+                practice_plot_path = plot_path   # Store plot path (for visualization)
             
             # Add the generated plot path to the list of generated files
             generated_files.append(plot_path)
             
-            # Once both files are processed, show the buttons to display waveforms
-            if sample_plot_path and practice_plot_path:
+            # Once both files are processed, show the buttons to display waveforms and onsets
+            if sample_audio_path and practice_audio_path:
                 display_label.config(text="Processing Completed for Both Files")
                 show_waveform_buttons()
+                show_onset_buttons()
         else:
             display_label.config(text=f"Error processing {file_type} file!")
 
@@ -92,24 +104,72 @@ def display_waveform(file_type):
     else:
         display_label.config(text=f"Error displaying {file_type} waveform.")
 
+# Function to detect and display onsets for Sample or Practice
+def display_onsets(file_type):
+    global sample_onset_plot, practice_onset_plot
+    file_path = sample_audio_path if file_type == "Sample" else practice_audio_path  # Use audio file path here
+    
+    # Perform onset detection
+    onset_times = detect_onsets(file_path)  # Pass audio file path
+    
+    # Generate the onset plot
+    plot_path = plot_onsets(file_path, onset_times)  # Use audio file path for plotting onsets
+    generated_files.append(plot_path)
+    if file_type == "Sample":
+        sample_onset_plot = plot_path
+    else:
+        practice_onset_plot = plot_path
+    
+    # Display the generated onset plot
+    if plot_path:
+        img = Image.open(plot_path)
+        img = img.resize((850, 450))  # Resize the image
+        img_tk = ImageTk.PhotoImage(img)
+        icon_label.config(image=img_tk)
+        icon_label.image = img_tk  # Keep a reference to prevent garbage collection
+
 # Function to create buttons for showing waveforms once both are processed
 def show_waveform_buttons():
     global waveform_buttons
-    
+
+    # Clear any existing buttons before placing new ones
+    for button in waveform_buttons:
+        button.grid_forget()
+
     # Create buttons to display either the "Sample" or "Practice" waveform
-    button_sample_waveform = tk.Button(root, text="Show Sample Waveform", command=lambda: display_waveform("Sample"), **button_style)
-    button_sample_waveform.pack(pady=10)
+    button_sample_waveform = tk.Button(button_frame, text="Show Sample Waveform", command=lambda: display_waveform("Sample"), **button_style)
+    button_sample_waveform.grid(row=0, column=0, padx=10, pady=10)  # Use grid to fix placement
     waveform_buttons.append(button_sample_waveform)
-    
-    button_practice_waveform = tk.Button(root, text="Show Practice Waveform", command=lambda: display_waveform("Practice"), **button_style)
-    button_practice_waveform.pack(pady=10)
+
+    button_practice_waveform = tk.Button(button_frame, text="Show Practice Waveform", command=lambda: display_waveform("Practice"), **button_style)
+    button_practice_waveform.grid(row=0, column=1, padx=10, pady=10)  # Use grid to fix placement
     waveform_buttons.append(button_practice_waveform)
+
+# Function to create buttons for showing onsets once both are processed
+def show_onset_buttons():
+    global onset_buttons
+
+    # Clear any existing buttons before placing new ones
+    for button in onset_buttons:
+        button.grid_forget()
+
+    # Create button to display the "Sample" onsets
+    button_sample_onset = tk.Button(button_frame, text="Show Sample Onsets", command=lambda: display_onsets("Sample"), **button_style)
+    button_sample_onset.grid(row=1, column=0, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_sample_onset)
+
+    # Create button to display the "Practice" onsets
+    button_practice_onset = tk.Button(button_frame, text="Show Practice Onsets", command=lambda: display_onsets("Practice"), **button_style)
+    button_practice_onset.grid(row=1, column=1, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_practice_onset)
 
 # Function to reset the interface
 def cancel_upload():
-    global sample_plot_path, practice_plot_path, waveform_buttons, sample_img, practice_img
-    
+    global sample_audio_path, practice_audio_path, sample_plot_path, practice_plot_path, waveform_buttons, onset_buttons, sample_img, practice_img
+
     # Reset file paths and remove any displayed images
+    sample_audio_path = None
+    practice_audio_path = None
     sample_plot_path = None
     practice_plot_path = None
     sample_img = None
@@ -118,12 +178,17 @@ def cancel_upload():
     
     # Reset the display label
     display_label.config(text="Upload files to display names here")
-    
+
     # Hide and remove the waveform buttons if they exist
     for button in waveform_buttons:
-        button.pack_forget()
+        button.grid_forget()
     waveform_buttons.clear()
 
+    # Hide and remove the onset buttons if they exist
+    for button in onset_buttons:
+        button.grid_forget()
+    onset_buttons.clear()
+    
 # Function to delete all generated PNG files
 def delete_generated_files():
     global generated_files
