@@ -41,7 +41,7 @@ def detect_onsets(file_path):
 # Function to plot the waveform with detected onsets
 def plot_onsets(file_path, onset_times):
     """
-    Plots the waveform with detected onsets and saves the plot.
+    Plots the waveform with detected onsets and saves the plot if it does not already exist.
 
     Parameters:
     - file_path (str): Path to the audio file.
@@ -51,14 +51,18 @@ def plot_onsets(file_path, onset_times):
     - output_plot (str): Path to the saved plot image.
     """
     try:
+        # Get the base name of the file (without extension) and create a unique output plot name
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        output_plot = f"{base_name}_onsets_plot.png"
+
+        # Check if the file already exists to avoid regenerating
+        if os.path.exists(output_plot):
+            print(f"Plot already exists: '{output_plot}', using existing image.")
+            return output_plot
+
         # Load the audio file again for visualization
         y, sr = librosa.load(file_path, sr=None, mono=True)
         print(f"Loaded audio file '{file_path}' for plotting with sample rate: {sr}")
-
-        # Get the base name of the file (without extension) and create a unique output plot name
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
-        timestamp = int(time.time())
-        output_plot = f"{base_name}_{timestamp}_onsets_plot.png"
 
         # Plot the waveform
         plt.figure(figsize=(14, 6))
@@ -79,7 +83,6 @@ def plot_onsets(file_path, onset_times):
     except Exception as e:
         print(f"Error in plotting onsets: {str(e)}")
         return None
-
 
 # Example usage:
 if __name__ == "__main__":
