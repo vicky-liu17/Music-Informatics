@@ -84,6 +84,32 @@ def plot_onsets(file_path, onset_times):
         print(f"Error in plotting onsets: {str(e)}")
         return None
 
+def extract_onset_features(file_path, sr=22050):
+    """
+    Extract onset times and onset strength from the audio file and align them.
+    
+    :param file_path: Path to the audio file
+    :param sr: Sampling rate, default is 22050Hz
+    :return: onset times, aligned onset strength
+    """
+    # Load the audio file
+    y, sr = librosa.load(file_path, sr=sr)
+    
+    # Extract onset strength envelope
+    onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+    
+    # Extract onset times (in frames, then convert to time)
+    onset_frames = librosa.onset.onset_detect(y=y, sr=sr)
+    onset_times = librosa.frames_to_time(onset_frames, sr=sr)
+    
+    # Get time corresponding to the strength envelope
+    strength_times = librosa.frames_to_time(np.arange(len(onset_env)), sr=sr)
+    
+    # Align onset strength with the onset times by picking the nearest strength for each onset time
+    aligned_onset_strength = np.interp(onset_times, strength_times, onset_env)
+    
+    return onset_times, aligned_onset_strength
+
 # Example usage:
 if __name__ == "__main__":
     # Example usage for testing

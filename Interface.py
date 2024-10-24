@@ -4,9 +4,9 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk  # For handling image display
 import os
 from audio_recognition import generate_waveform_plot  # Import the waveform plot function
-from audio_onset_detection import detect_onsets, plot_onsets  # Import the onset detection logic
+from audio_onset_detection import extract_onset_features, detect_onsets, plot_onsets  # Import the onset detection logic
 from audio_preprocessing import preprocess_audio
-from dtw import compare_onsets_dtw
+from dtw import compare_onsets_dtw,compare_onsets_dtw_2d
 import numpy as np
 
 # Create the main window and set it to full screen
@@ -62,6 +62,7 @@ button_frame.pack(side="bottom", fill="x")
 def upload_file(file_type):
     global sample_audio_path, practice_audio_path, sample_plot_path, practice_plot_path
     global sample_onset_plot, practice_onset_plot, sample_onset_times, practice_onset_times
+    global sample_onset_strength, practice_onset_strength
 
     file_path = filedialog.askopenfilename(title=f"Select {file_type} Audio File", filetypes=[("Audio Files", "*.wav *.mp3")])
     if file_path:
@@ -77,7 +78,7 @@ def upload_file(file_type):
 
         if plot_path:
             # Perform onset detection
-            onset_times = detect_onsets(file_path)  # Onset detection for the current file
+            onset_times, onset_strength = extract_onset_features(file_path)
             
             display_label.config(text=f"{file_type} Processing Completed: {file_path.split('/')[-1]}")
             
@@ -86,10 +87,12 @@ def upload_file(file_type):
                 sample_audio_path = file_path
                 sample_plot_path = plot_path
                 sample_onset_times = onset_times  # Store the detected onsets for the sample
+                sample_onset_strength = onset_strength
             elif file_type == "Practice":
                 practice_audio_path = file_path
                 practice_plot_path = plot_path
                 practice_onset_times = onset_times  # Store the detected onsets for the practice
+                practice_onset_strength = onset_strength
             
             # Once both files are processed, show buttons to display waveforms and onsets
             if sample_audio_path and practice_audio_path:
@@ -98,6 +101,7 @@ def upload_file(file_type):
                 show_onset_buttons()
         else:
             display_label.config(text=f"Error processing {file_type} file!")
+
 
             
 # Function to display the "Sample" or "Practice" waveform
@@ -180,6 +184,40 @@ def display_dtw_result():
     else:
         display_label.config(text="Please upload both Sample and Practice audio files first.")
 
+# Function to display 2D DTW alignment image and distance
+def display_dtw_2d_result():
+    global sample_onset_times, practice_onset_times, sample_onset_strength, practice_onset_strength
+    
+    # Check if both onset times and onset strength for sample and practice are available
+    if sample_onset_times.size > 0 and practice_onset_times.size > 0 and sample_onset_strength.size > 0 and practice_onset_strength.size > 0:
+        # Ensure both onset time and strength arrays are 1-D NumPy arrays
+        sample_onset_times = np.ravel(sample_onset_times)
+        practice_onset_times = np.ravel(practice_onset_times)
+        sample_onset_strength = np.ravel(sample_onset_strength)
+        practice_onset_strength = np.ravel(practice_onset_strength)
+        
+        print("Sample onset shape:", sample_onset_times.shape)
+        print("Practice onset shape:", practice_onset_times.shape)
+        print("Sample onset strength shape:", sample_onset_strength.shape)
+        print("Practice onset strength shape:", practice_onset_strength.shape)
+
+        # Perform 2D DTW comparison and get the distance and plot path
+        dtw_distance, dtw_plot_path = compare_onsets_dtw_2d(sample_onset_times, sample_onset_strength, practice_onset_times, practice_onset_strength)
+        generated_files.append(dtw_plot_path)
+        
+        # Update the display label with the DTW distance
+        display_label.config(text=f"DTW Distance: {dtw_distance:.2f}")
+        
+        # Display the DTW alignment plot if the plot was successfully created
+        if os.path.exists(dtw_plot_path):
+            img = Image.open(dtw_plot_path)
+            img = img.resize((850, 450))  # Resize the image to fit the interface
+            img_tk = ImageTk.PhotoImage(img)
+            icon_label.config(image=img_tk)
+            icon_label.image = img_tk  # Keep a reference to prevent garbage collection
+    else:
+        display_label.config(text="Please upload both Sample and Practice audio files with valid onset times and strength.")
+
 
 
 # Function to create buttons for showing waveforms once both are processed
@@ -221,6 +259,11 @@ def show_onset_buttons():
     button_compare_onset = tk.Button(button_frame, text="Compare Onsets with DTW", command=display_dtw_result, **button_style)
     button_compare_onset.grid(row=0, column=2, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_compare_onset)  
+    
+    # Create button to display the "Practice" onsets
+    button_compare_2d_onset = tk.Button(button_frame, text="Compare Onsets with 2D DTW", command=display_dtw_2d_result, **button_style)
+    button_compare_2d_onset.grid(row=1, column=2, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_compare_2d_onset)  
 
 # Function to reset the interface
 def cancel_upload():
