@@ -5,7 +5,7 @@ from PIL import Image
 import os
 import time
 
-# Function to process audio and generate waveform plot
+# Function to process audio and generate normalized waveform plot
 def generate_waveform_plot(file_path):
     try:
         # Load the audio file using pydub
@@ -18,6 +18,11 @@ def generate_waveform_plot(file_path):
         # Convert to numpy array
         samples = np.array(audio.get_array_of_samples())
         sample_rate = audio.frame_rate
+
+        # Normalize the samples to the range [-1, 1]
+        max_val = np.max(np.abs(samples))  # Find the maximum absolute value in the samples
+        if max_val > 0:  # Avoid division by zero
+            samples = samples / max_val  # Normalize to [-1, 1]
 
         # Time axis for plotting
         time_axis = np.linspace(0, len(samples) / sample_rate, num=len(samples))
@@ -33,8 +38,8 @@ def generate_waveform_plot(file_path):
         plt.figure(figsize=(10, 4))
         plt.plot(time_axis, samples)
         plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.title(f"Waveform of {base_name}")
+        plt.ylabel("Amplitude (Normalized)")
+        plt.title(f"Waveform of {base_name} (Normalized)")
 
         # Save the plot as an image with the unique filename
         plt.savefig(output_plot)

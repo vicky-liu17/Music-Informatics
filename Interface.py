@@ -4,8 +4,7 @@ from tkinter import font as tkfont
 from PIL import Image, ImageTk  # For handling image display
 import os
 from audio_recognition import generate_waveform_plot  # Import the waveform plot function
-from audio_onset_detection import extract_onset_features, detect_onsets, plot_onsets  # Import the onset detection logic
-from audio_preprocessing import preprocess_audio
+from audio_onset_detection import extract_onset_features, detect_onsets, plot_onsets, extract_chroma_at_custom_onsets,plot_onset_chroma  # Import the onset detection logic
 from dtw import compare_onsets_dtw,compare_onsets_dtw_2d
 import numpy as np
 
@@ -63,6 +62,7 @@ def upload_file(file_type):
     global sample_audio_path, practice_audio_path, sample_plot_path, practice_plot_path
     global sample_onset_plot, practice_onset_plot, sample_onset_times, practice_onset_times
     global sample_onset_strength, practice_onset_strength
+    global sample_onset_chroma, practice_onset_chroma
 
     file_path = filedialog.askopenfilename(title=f"Select {file_type} Audio File", filetypes=[("Audio Files", "*.wav *.mp3")])
     if file_path:
@@ -79,6 +79,7 @@ def upload_file(file_type):
         if plot_path:
             # Perform onset detection
             onset_times, onset_strength = extract_onset_features(file_path)
+            onset_chroma = extract_chroma_at_custom_onsets(file_path,onset_times)
             
             display_label.config(text=f"{file_type} Processing Completed: {file_path.split('/')[-1]}")
             
@@ -88,11 +89,13 @@ def upload_file(file_type):
                 sample_plot_path = plot_path
                 sample_onset_times = onset_times  # Store the detected onsets for the sample
                 sample_onset_strength = onset_strength
+                sample_onset_chroma = onset_chroma
             elif file_type == "Practice":
                 practice_audio_path = file_path
                 practice_plot_path = plot_path
                 practice_onset_times = onset_times  # Store the detected onsets for the practice
                 practice_onset_strength = onset_strength
+                practice_onset_chroma = onset_chroma
             
             # Once both files are processed, show buttons to display waveforms and onsets
             if sample_audio_path and practice_audio_path:
@@ -143,6 +146,40 @@ def display_onsets(file_type):
         practice_onset_plot = plot_path
 
     # Display the generated onset plot
+    if plot_path:
+        img = Image.open(plot_path)
+        img = img.resize((850, 450))  # Resize the image
+        img_tk = ImageTk.PhotoImage(img)
+        icon_label.config(image=img_tk)
+        icon_label.image = img_tk  # Keep a reference to prevent garbage collection
+        
+        
+# Function to detect and display chroma features at onsets for Sample or Practice
+def display_onset_chroma(file_type):
+    global sample_onset_plot, practice_onset_plot, sample_onset_times, practice_onset_times
+    global sample_onset_chroma, practice_onset_chroma
+
+    # Use the pre-detected onset times based on the file type
+    if file_type == "Sample":
+        onset_times = sample_onset_times  # Use the stored onset times for Sample
+        file_path = sample_audio_path
+        onset_chroma = sample_onset_chroma
+    else:
+        onset_times = practice_onset_times  # Use the stored onset times for Practice
+        file_path = practice_audio_path
+        onset_chroma = practice_onset_chroma
+
+    # Generate the chroma plot using the pre-detected onset times
+    plot_path = plot_onset_chroma(onset_times, onset_chroma[1], file_path)  # Modify to use plot_onset_chroma
+    generated_files.append(plot_path)  # Keep track of generated files
+
+    # Store the onset plot path for later reference
+    if file_type == "Sample":
+        sample_onset_plot = plot_path
+    else:
+        practice_onset_plot = plot_path
+
+    # Display the generated chroma plot
     if plot_path:
         img = Image.open(plot_path)
         img = img.resize((850, 450))  # Resize the image
@@ -234,7 +271,7 @@ def show_waveform_buttons():
     waveform_buttons.append(button_sample_waveform)
 
     button_practice_waveform = tk.Button(button_frame, text="Show Practice Waveform", command=lambda: display_waveform("Practice"), **button_style)
-    button_practice_waveform.grid(row=0, column=1, padx=10, pady=10)  # Use grid to fix placement
+    button_practice_waveform.grid(row=1, column=0, padx=10, pady=10)  # Use grid to fix placement
     waveform_buttons.append(button_practice_waveform)
 
 # Function to create buttons for showing onsets once both are processed
@@ -247,7 +284,7 @@ def show_onset_buttons():
 
     # Create button to display the "Sample" onsets
     button_sample_onset = tk.Button(button_frame, text="Show Sample Onsets", command=lambda: display_onsets("Sample"), **button_style)
-    button_sample_onset.grid(row=1, column=0, padx=10, pady=10)  # Use grid to fix placement
+    button_sample_onset.grid(row=0, column=1, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_sample_onset)
 
     # Create button to display the "Practice" onsets
@@ -255,15 +292,25 @@ def show_onset_buttons():
     button_practice_onset.grid(row=1, column=1, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_practice_onset)
     
+    # Create button to display the "Sample" onsets chroma
+    button_display_sample_chroma = tk.Button(button_frame, text="Display Sample Chroma", command=lambda: display_onset_chroma("Sample"), **button_style)
+    button_display_sample_chroma.grid(row=0, column=2, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_display_sample_chroma)
+
+    # Create button to display the "Practice" onsets chroma
+    button_display_practice_chroma = tk.Button(button_frame, text="Display Practice Chroma", command=lambda: display_onset_chroma("Practice"), **button_style)
+    button_display_practice_chroma.grid(row=1, column=2, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_display_practice_chroma)
+
     # Create button to display the "Practice" onsets
     button_compare_onset = tk.Button(button_frame, text="Compare Onsets with DTW", command=display_dtw_result, **button_style)
-    button_compare_onset.grid(row=0, column=2, padx=10, pady=10)  # Use grid to fix placement
+    button_compare_onset.grid(row=0, column=3, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_compare_onset)  
     
     # Create button to display the "Practice" onsets
     button_compare_2d_onset = tk.Button(button_frame, text="Compare Onsets with 2D DTW", command=display_dtw_2d_result, **button_style)
-    button_compare_2d_onset.grid(row=1, column=2, padx=10, pady=10)  # Use grid to fix placement
-    onset_buttons.append(button_compare_2d_onset)  
+    button_compare_2d_onset.grid(row=1, column=3, padx=10, pady=10)  # Use grid to fix placement
+    onset_buttons.append(button_compare_2d_onset) 
 
 # Function to reset the interface
 def cancel_upload():
