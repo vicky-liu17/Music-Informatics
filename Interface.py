@@ -23,7 +23,7 @@ frame_top = Frame(root, bg="#F0F0F0")
 frame_top.pack(pady=20)
 
 # Title label
-title_label = Label(root, text="Audio Recognition Tool", font=title_font, bg="#F0F0F0", fg="#333")
+title_label = Label(root, text="Music Evaluation Tool", font=title_font, bg="#F0F0F0", fg="#333")
 title_label.pack(pady=20)
 
 # Display area for showing uploaded file names and result icon
@@ -289,12 +289,12 @@ def show_onset_buttons():
     onset_buttons.append(button_practice_onset)
     
     # Create button to display the "Sample" onsets chroma
-    button_display_sample_chroma = tk.Button(button_frame, text="Display Sample Chroma", command=lambda: display_onset_chroma("Sample"), **button_style)
+    button_display_sample_chroma = tk.Button(button_frame, text="Sample Piano Roll", command=lambda: display_onset_chroma("Sample"), **button_style)
     button_display_sample_chroma.grid(row=0, column=2, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_display_sample_chroma)
 
     # Create button to display the "Practice" onsets chroma
-    button_display_practice_chroma = tk.Button(button_frame, text="Display Practice Chroma", command=lambda: display_onset_chroma("Practice"), **button_style)
+    button_display_practice_chroma = tk.Button(button_frame, text="Practice Piano Roll", command=lambda: display_onset_chroma("Practice"), **button_style)
     button_display_practice_chroma.grid(row=1, column=2, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_display_practice_chroma)
 
