@@ -5,7 +5,7 @@ from PIL import Image, ImageTk  # For handling image display
 import os
 from audio_recognition import generate_waveform_plot  # Import the waveform plot function
 from audio_onset_detection import extract_onset_features, detect_onsets, plot_onsets, extract_chroma_at_custom_onsets,plot_onset_chroma  # Import the onset detection logic
-from dtw import compare_onsets_dtw,compare_onsets_dtw_2d
+from dtw import compare_onsets_dtw,compare_onsets_dtw_weighted
 import numpy as np
 
 # Create the main window and set it to full screen
@@ -195,13 +195,13 @@ def display_dtw_result():
     # Check if both sample_onset_times and practice_onset_times are not empty
     if sample_onset_times.size > 0 and practice_onset_times.size > 0:
         # Ensure both onset time arrays are 1-D NumPy arrays
-        sample_onset_times = np.ravel(sample_onset_times)
-        practice_onset_times = np.ravel(practice_onset_times)
-        sample_onset_chroma = np.ravel(sample_onset_chroma)
-        practice_onset_chroma = np.ravel(practice_onset_chroma)
+        sample_onset_times_1d = np.ravel(sample_onset_times)
+        practice_onset_times_1d = np.ravel(practice_onset_times)
+        sample_onset_chroma_1d = np.ravel(sample_onset_chroma)
+        practice_onset_chroma_1d = np.ravel(practice_onset_chroma)
 
         # Perform DTW comparison and get the distance and plot path
-        dtw_distance, dtw_plot_path = compare_onsets_dtw(sample_onset_times, practice_onset_times,sample_onset_chroma[1],practice_onset_chroma[1])
+        dtw_distance, dtw_plot_path = compare_onsets_dtw(sample_onset_times_1d, practice_onset_times_1d,sample_onset_chroma_1d[1],practice_onset_chroma_1d[1])
         generated_files.append(dtw_plot_path)
         
         # Update the display label with the DTW distance
@@ -217,9 +217,9 @@ def display_dtw_result():
     else:
         display_label.config(text="Please upload both Sample and Practice audio files first.")
 
-# Function to display 2D DTW alignment image and distance
-def display_dtw_2d_result():
+def display_dtw_weighted_result():
     global sample_onset_times, practice_onset_times, sample_onset_strength, practice_onset_strength
+    global sample_onset_chroma, practice_onset_chroma
     
     # Check if both onset times and onset strength for sample and practice are available
     if sample_onset_times.size > 0 and practice_onset_times.size > 0 and sample_onset_strength.size > 0 and practice_onset_strength.size > 0:
@@ -234,8 +234,8 @@ def display_dtw_2d_result():
         print("Sample onset strength shape:", sample_onset_strength.shape)
         print("Practice onset strength shape:", practice_onset_strength.shape)
 
-        # Perform 2D DTW comparison and get the distance and plot path
-        dtw_distance, dtw_plot_path = compare_onsets_dtw_2d(sample_onset_times, sample_onset_strength, practice_onset_times, practice_onset_strength)
+        # Perform weighted DTW comparison and get the distance and plot path
+        dtw_distance, dtw_plot_path = compare_onsets_dtw_weighted(sample_onset_times, sample_onset_strength, sample_onset_chroma[1],practice_onset_times, practice_onset_strength, practice_onset_chroma[1])
         generated_files.append(dtw_plot_path)
         
         # Update the display label with the DTW distance
@@ -299,14 +299,14 @@ def show_onset_buttons():
     onset_buttons.append(button_display_practice_chroma)
 
     # Create button to display the "Practice" onsets
-    button_compare_onset = tk.Button(button_frame, text="Compare Onsets with DTW", command=display_dtw_result, **button_style)
+    button_compare_onset = tk.Button(button_frame, text="DTW", command=display_dtw_result, **button_style)
     button_compare_onset.grid(row=0, column=3, padx=10, pady=10)  # Use grid to fix placement
     onset_buttons.append(button_compare_onset)  
     
     # Create button to display the "Practice" onsets
-    button_compare_2d_onset = tk.Button(button_frame, text="Compare Onsets with 2D DTW", command=display_dtw_2d_result, **button_style)
-    button_compare_2d_onset.grid(row=1, column=3, padx=10, pady=10)  # Use grid to fix placement
-    onset_buttons.append(button_compare_2d_onset) 
+    # button_compare_weighted_onset = tk.Button(button_frame, text="Weighted DTW", command=display_dtw_weighted_result, **button_style)
+    # button_compare_weighted_onset.grid(row=1, column=3, padx=10, pady=10)  # Use grid to fix placement
+    # onset_buttons.append(button_compare_weighted_onset) 
 
 # Function to reset the interface
 def cancel_upload():
