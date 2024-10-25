@@ -190,22 +190,18 @@ def display_onset_chroma(file_type):
 # Function to display DTW alignment image and distance
 def display_dtw_result():
     global sample_onset_times, practice_onset_times
+    global sample_onset_chroma, practice_onset_chroma
     
     # Check if both sample_onset_times and practice_onset_times are not empty
     if sample_onset_times.size > 0 and practice_onset_times.size > 0:
         # Ensure both onset time arrays are 1-D NumPy arrays
         sample_onset_times = np.ravel(sample_onset_times)
         practice_onset_times = np.ravel(practice_onset_times)
-        
-        print("Sample onset shape:", sample_onset_times.shape)
-        print("Practice onset shape:", practice_onset_times.shape)
-        print("Sample onset type:", type(sample_onset_times))
-        print("Practice onset type:", type(practice_onset_times))
-        print("Sample onset values:", sample_onset_times)
-        print("Practice onset values:", practice_onset_times)
+        sample_onset_chroma = np.ravel(sample_onset_chroma)
+        practice_onset_chroma = np.ravel(practice_onset_chroma)
 
         # Perform DTW comparison and get the distance and plot path
-        dtw_distance, dtw_plot_path = compare_onsets_dtw(sample_onset_times, practice_onset_times)
+        dtw_distance, dtw_plot_path = compare_onsets_dtw(sample_onset_times, practice_onset_times,sample_onset_chroma[1],practice_onset_chroma[1])
         generated_files.append(dtw_plot_path)
         
         # Update the display label with the DTW distance
